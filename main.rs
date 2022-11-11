@@ -26,12 +26,20 @@ fn main() -> io::Result<()> {
     for arg in env::args().skip(1) {
         // Get the words of the right length
         let words_of_right_length = &words[&arg.len()];
+
+        // Set up a set for detecting duplicates.
+        let mut seen_words = HashSet::new();
+
         // Iterate over all permutations and see if the permutation is present in the dictionary
         for p in arg.chars().permutations(arg.len()) {
+            if seen_words.contains(&p) {
+                continue;
+            }
             let perm_word = p.iter().collect::<String>();
             if words_of_right_length.contains(&perm_word) {
                 println!("{}", &perm_word);
             }
+            seen_words.insert(p);
         }
     }
 
