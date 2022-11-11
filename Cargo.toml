@@ -1,0 +1,14 @@
+[package]
+name = "wordscramble"
+version = "0.1.0"
+authors = ["Nellie Zhang <nelliezh@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+itertools = "0.10.5"
+
+[[bin]]
+name = "rust"
+path = "main.rs"
