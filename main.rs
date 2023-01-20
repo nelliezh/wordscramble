@@ -18,11 +18,12 @@ fn main() -> io::Result<()> {
     for line in reader.lines() {
         let l = line?.to_lowercase();
         if let Some(words_with_len) = words.get_mut(&l.len()) {
-            words_with_len.insert(l.clone());
+            words_with_len.insert(l);
         } else {
             let mut v = HashSet::new();
-            v.insert(l.clone());
-            words.insert(l.len(), v);
+            let len = l.len();
+            v.insert(l);
+            words.insert(len, v);
         };
     }
 
