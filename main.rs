@@ -2,11 +2,14 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, prelude::*, BufReader};
 use std::env;
+use std::thread;
 use itertools::Itertools;
+use num_cpus;
 
 fn main() -> io::Result<()> {
     // Open the dictionary
-    let file = File::open("/usr/share/dict/words")?;
+    let cpus = num_cpus::get();
+    let file = File::open("words.txt")?;
     let reader = BufReader::new(file);
     let mut words:HashMap<usize, HashSet<String>> = HashMap::new();
 
@@ -27,20 +30,27 @@ fn main() -> io::Result<()> {
         // Get the words of the right length
         let words_of_right_length = &words[&arg.len()];
 
-        // Set up a set for detecting duplicates.
-        let mut seen_words = HashSet::new();
+        std::thread::scope(|s| {
+            let arg = &arg;
+             for thread_index in 0..cpus {
+                s.spawn(move || {
+                    // Set up a set for detecting duplicates.
+            //        let mut seen_words = HashSet::new();
 
-        // Iterate over all permutations and see if the permutation is present in the dictionary
-        for p in arg.chars().permutations(arg.len()) {
-            if seen_words.contains(&p) {
-                continue;
+                    // Iterate over all permutations and see if the permutation is present in the dictionary
+                    for p in arg.chars().permutations(arg.len()).skip(thread_index).step_by(cpus) {
+            //            if seen_words.contains(&p) {
+            //                continue;
+            //            }
+                        let perm_word = p.iter().collect::<String>();
+                        if words_of_right_length.contains(&perm_word) {
+                            println!("{}", &perm_word);
+                        }
+            //            seen_words.insert(p);
+                    }
+                });
             }
-            let perm_word = p.iter().collect::<String>();
-            if words_of_right_length.contains(&perm_word) {
-                println!("{}", &perm_word);
-            }
-            seen_words.insert(p);
-        }
+        });
     }
 
     Ok(())
