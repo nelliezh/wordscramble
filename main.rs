@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::io::{self, prelude::*, BufReader, BufRead};
+use std::io::{self, BufReader, BufRead};
 use itertools::Itertools;
 use num_cpus;
 
@@ -32,14 +32,15 @@ fn solve(arg : &String, cpus: usize, words:&HashMap<usize, HashSet<String>> ) {
                     if words_of_right_length.contains(&perm_word) {
                         // Found a word that matches. See if it was already seen.
                         {
-                            let mut locked_map = seen_words.lock().unwrap();
-                            // It was, just skip it.
-                            if locked_map.contains(&p) {
-                                continue;
+                            if let Ok(mut locked_map) = seen_words.lock() {
+                                // It was, just skip it.
+                                if locked_map.contains(&p) {
+                                    continue;
+                                }
+                                // If we got here, it's a new word. Add it to the map, then print
+                                // it out.
+                                locked_map.insert(p);
                             }
-                            // If we got here, it's a new word. Add it to the map, then print
-                            // it out.
-                            locked_map.insert(p);
                         }
                         println!("{}", &perm_word);
                     }
@@ -48,17 +49,17 @@ fn solve(arg : &String, cpus: usize, words:&HashMap<usize, HashSet<String>> ) {
         }
     });
 
-    println!("--------");
+    let locked_map = seen_words.lock();
+    if let Ok(map) =locked_map {
+        println!("{} words found", map.len());
+    } else {
+        println!("--------");
+    }
 }
 
-fn main() -> io::Result<()> {
-    // Open the dictionary
-    let cpus = num_cpus::get();
-    let file = File::open("words.txt")?;
-    let reader = BufReader::new(file);
-
-    // Create a map from word length to a set of words with that length.
-    let mut words:HashMap<usize, HashSet<String>> = HashMap::new();
+fn read_words(path: &str, words: &mut HashMap<usize, HashSet<String>>) -> io::Result<()> {
+   let file = File::open(path)?;
+   let reader = BufReader::new(file);
 
     // Read all words into the map.
     for line in reader.lines() {
@@ -73,13 +74,27 @@ fn main() -> io::Result<()> {
         };
     }
 
+    Ok(())
+}
+
+fn main() -> io::Result<()> {
+    // Open the dictionary
+    let cpus = num_cpus::get();
+    // Create a map from word length to a set of words with that length.
+    let mut words:HashMap<usize, HashSet<String>> = HashMap::new();
+
+    // Read the contents of files into the list of words dictionary.
+    read_words("/usr/share/dict/words", &mut words)?;
+    read_words("words.txt", &mut words)?;
+ 
     // Iterate over arguments, skipping the first, which is the program name.
     for arg in std::env::args().skip(1) {
         solve(&arg, cpus, &words);
     }
 
-    let stdin = io::stdin();
-    for line in stdin.lock().lines() {
+    // Then take arguments from stdin.
+    println!("Please enter a scrambled word: ");
+    for line in io::stdin().lock().lines() {
         solve(&line.unwrap(), cpus, &words);
     }
 
